@@ -7,11 +7,6 @@ const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
 let guildConnections = new Map();
 
 client.on("voiceStateUpdate", async (oldVoiceState, newVoiceState) => {
-  if (guildConnections.has(newVoiceState.guild.id)) {
-    let connection = guildConnections.get(newVoiceState.guild.id);
-    connection.player;
-    console.log("playing");
-  }
   if (
     newVoiceState.member.id != "880613137127178260" &&
     newVoiceState.channel &&
