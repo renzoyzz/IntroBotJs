@@ -4,7 +4,40 @@ const { DownloaderHelper } = require("node-downloader-helper");
 const fs = require("fs");
 require("@discordjs/opus");
 const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
-let guildConnections = new Map();
+let guildQueues = new Map();
+
+class Queue {
+  constructor() {
+    this.items = [];
+    this.playing = false;
+  }
+
+  dequeue() {
+    return this.items.shift();
+  }
+
+  enqueue(username, channel) {
+    this.items.push({ username: username, channel: channel });
+  }
+
+  async playQueue() {
+    if (!this.playing) {
+      this.playing = true;
+      while (this.items.length != 0) {
+        let current = this.dequeue();
+        let connection = await current.channel.join();
+        connection.setMaxListeners(0);
+        let dispatcher = connection.play(`./content/${current.username}.wav`);
+        await new Promise((resolve) => {
+          dispatcher.once("finish", (end) => {
+            resolve();
+          });
+        });
+      }
+      this.playing = false;
+    }
+  }
+}
 
 client.on("voiceStateUpdate", async (oldVoiceState, newVoiceState) => {
   if (
@@ -15,8 +48,11 @@ client.on("voiceStateUpdate", async (oldVoiceState, newVoiceState) => {
     let member = newVoiceState.member;
     let channel = newVoiceState.channel;
     let guildId = channel.guild.id;
-    let connection = await channel.join();
-    guildConnections.set(guildId, connection);
+    if (!guildQueues.has(guildId)) {
+      guildQueues.set(guildId, new Queue());
+    }
+    let queue = guildQueues.get(guildId);
+
     if (!fs.existsSync(`./content/${member.displayName}.wav`)) {
       let url = `https://tetyys.com/SAPI4/SAPI4?text=Welcome%20${encodeURI(
         member.displayName
@@ -26,7 +62,8 @@ client.on("voiceStateUpdate", async (oldVoiceState, newVoiceState) => {
       });
       await dl.start();
     }
-    connection.play(`./content/${member.displayName}.wav`);
+    queue.enqueue(member.displayName, channel);
+    queue.playQueue();
   }
 });
 
