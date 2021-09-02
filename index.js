@@ -10,6 +10,7 @@ class Queue {
   constructor() {
     this.items = [];
     this.playing = false;
+    this.cooldowns = new Map();
   }
 
   dequeue() {
@@ -17,7 +18,18 @@ class Queue {
   }
 
   enqueue(username, channel) {
-    this.items.push({ username: username, channel: channel });
+    if (this.isUsernameOffCooldown(username)) {
+      this.cooldowns.set(username, new Date());
+      this.items.push({ username: username, channel: channel });
+    }
+  }
+
+  isUsernameOffCooldown(username) {
+    return (
+      !this.cooldowns.has(username) ||
+      (new Date().getTime() - this.cooldowns.get(username).getTime()) / 1000 >
+        60
+    );
   }
 
   async playQueue() {
