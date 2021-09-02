@@ -2,7 +2,6 @@ require("dotenv").config();
 const { Client, Intents } = require("discord.js");
 const { DownloaderHelper } = require("node-downloader-helper");
 const fs = require("fs");
-require("@discordjs/opus");
 const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
 let guildQueues = new Map();
 
