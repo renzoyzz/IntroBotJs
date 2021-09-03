@@ -12,11 +12,6 @@ const express = require("express");
 const app = express();
 app.listen(8080);
 app.get("/", async (req, res) => {
-  // await new Promise((resolve) => {
-  //   setTimeout(() => {
-  //     resolve();
-  //   }, 20000);
-  // });
   res.send("healthy");
 });
 
