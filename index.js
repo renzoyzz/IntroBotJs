@@ -79,11 +79,17 @@ client.on("voiceStateUpdate", async (oldVoiceState, newVoiceState) => {
       guildQueues.set(guildId, new Queue());
     }
     let queue = guildQueues.get(guildId);
-
     if (!fs.existsSync(join(__dirname, `content/${member.displayName}.wav`))) {
-      let url = `https://tetyys.com/SAPI4/SAPI4?text=Welcome%20${encodeURI(
-        member.displayName
-      )}%20to%20the%20big%20dick%20club&voice=Mike%20in%20Hall&pitch=100&speed=140`;
+      let url = "";
+      if (member.id == "547905866255433758") {
+        url = `https://tetyys.com/SAPI4/SAPI4?text=Hail%20${encodeURI(
+          member.displayName
+        )}&voice=Mike%20in%20Hall&pitch=100&speed=140`;
+      } else {
+        url = `https://tetyys.com/SAPI4/SAPI4?text=Welcome%20${encodeURI(
+          member.displayName
+        )}%20to%20the%20big%20dick%20club&voice=Mike%20in%20Hall&pitch=100&speed=140`;
+      }
       let dl = new DownloaderHelper(url, contentPath, {
         fileName: `${member.displayName}.wav`,
       });
