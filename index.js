@@ -1,5 +1,8 @@
 require("dotenv").config();
-const { Client, Intents } = require("discord.js");
+const FakeYou = require('fakeyou.js');
+const { Client, GatewayIntentBits } = require("discord.js");
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
+const player = createAudioPlayer();
 const { DownloaderHelper } = require("node-downloader-helper");
 const fs = require("fs");
 const { join } = require("path");
@@ -7,7 +10,7 @@ const contentPath = join(__dirname, `content`);
 if (!fs.existsSync(contentPath)) {
   fs.mkdirSync(contentPath);
 }
-const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates] });
 const express = require("express");
 const app = express();
 app.listen(8080);
@@ -15,8 +18,13 @@ app.get("/", async (req, res) => {
   res.send("healthy");
 });
 
+const fy = new FakeYou.Client({
+  usernameOrEmail: process.env["USER"],
+  password: process.env["PASSWORD"]
+});
+
+
 let guildQueues = new Map();
-let guildConnections = new Map();
 
 class Queue {
   constructor() {
@@ -40,7 +48,7 @@ class Queue {
     return (
       !this.cooldowns.has(username) ||
       (new Date().getTime() - this.cooldowns.get(username).getTime()) / 1000 >
-        60
+      60
     );
   }
 
@@ -49,14 +57,16 @@ class Queue {
       this.playing = true;
       while (this.items.length != 0) {
         let current = this.dequeue();
-        let connection = await current.channel.join();
-        connection.setMaxListeners(0);
-        guildConnections.set(current.channel.guild.id, connection);
-        let dispatcher = connection.play(
-          join(contentPath, `${current.username}.wav`)
-        );
+        let connection = joinVoiceChannel({
+          channelId: current.channel.id,
+          guildId: current.channel.guild.id,
+          adapterCreator: current.channel.guild.voiceAdapterCreator,
+        });
+        let resource = createAudioResource(join(contentPath, `${current.username}.wav`));
+        player.play(resource);
+        connection.subscribe(player);
         await new Promise((resolve) => {
-          dispatcher.once("finish", (end) => {
+          player.once(AudioPlayerStatus.Idle, (end) => {
             resolve();
           });
         });
@@ -80,20 +90,16 @@ client.on("voiceStateUpdate", async (oldVoiceState, newVoiceState) => {
     }
     let queue = guildQueues.get(guildId);
     if (!fs.existsSync(join(__dirname, `content/${member.displayName}.wav`))) {
-      let url = "";
-      if (member.id == "547905866255433758") {
-        url = `https://tetyys.com/SAPI4/SAPI4?text=Hail%20${encodeURI(
-          member.displayName
-        )}&voice=Mike%20in%20Hall&pitch=100&speed=140`;
-      } else {
-        url = `https://tetyys.com/SAPI4/SAPI4?text=Welcome%20${encodeURI(
-          member.displayName
-        )}%20to%20the%20big%20dick%20club&voice=Mike%20in%20Hall&pitch=100&speed=140`;
-      }
+      await fy.start(); //required
+      let message = phrases[Math.floor(Math.random() * phrases.length)];
+      message = message.replace('{0}', member.displayName);
+      let result = await fy.makeTTS("TM:9b3paz5cq8q3", message);
+      let url = result.audioURL();
       let dl = new DownloaderHelper(url, contentPath, {
         fileName: `${member.displayName}.wav`,
       });
       await dl.start();
+      return;
     }
     queue.enqueue(member.displayName, channel);
     queue.playQueue();
@@ -102,12 +108,20 @@ client.on("voiceStateUpdate", async (oldVoiceState, newVoiceState) => {
     let guildId = channel.guild.id;
     if (channel.members.size <= 1) {
       guildQueues.delete(guildId);
-      if (guildConnections.has(guildId)) {
-        guildConnections.get(guildId).disconnect();
-        guildConnections.delete(guildId);
-      }
     }
   }
 });
+
+let phrases = [
+  '{0} has spawned!',
+  '{0} has reconnected.',
+  'Welcome {0} to Summoners Rift.',
+  '{0} is god-like!',
+  '{0} has slain the dragon!',
+  '{0} has slain the baron!',
+  '{0} is dominating',
+  '{0} is unstoppable!',
+  '{0} is legendary!'
+]
 
 client.login(process.env["TOKEN"]);
