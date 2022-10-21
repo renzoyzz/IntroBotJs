@@ -99,7 +99,6 @@ client.on("voiceStateUpdate", async (oldVoiceState, newVoiceState) => {
         fileName: `${member.displayName}.wav`,
       });
       await dl.start();
-      return;
     }
     queue.enqueue(member.displayName, channel);
     queue.playQueue();
@@ -118,7 +117,7 @@ let phrases = [
   'Welcome {0} to Summoners Rift.',
   '{0} is god-like!',
   '{0} has slain the dragon!',
-  '{0} has slain the baron!',
+  '{0} has slain baron nashor!',
   '{0} is dominating',
   '{0} is unstoppable!',
   '{0} is legendary!'
